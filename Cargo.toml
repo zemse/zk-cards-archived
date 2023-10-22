@@ -1,0 +1,12 @@
+[package]
+name = "zk-card"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+halo2-utils = { path = "/Users/sohamzemse/Workspace/opensource/personal/halo2-utils" }
+
+[patch."https://github.com/privacy-scaling-explorations/halo2.git"]
+halo2_proofs = { path = "../../opensource/external/pse-halo2/halo2_proofs" } 
