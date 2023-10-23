@@ -1,4 +1,10 @@
+use std::marker;
+
 use halo2_utils::{
+    halo2_gadgets::poseidon::{
+        primitives::{self as poseidon, generate_constants, ConstantLength, Mds, Spec},
+        Hash, Pow5Chip, Pow5Config,
+    },
     halo2_proofs::{
         circuit::{SimpleFloorPlanner, Value},
         plonk::{Advice, Circuit, Column, Expression, Fixed, Instance, Selector},
@@ -7,6 +13,7 @@ use halo2_utils::{
     CircuitExt, Expr, FieldExt,
 };
 
+#[derive(Debug, Clone)]
 pub struct DistinctSingleKeyCircuit<
     F: FieldExt,
     const NUM_CARDS: usize,
@@ -19,7 +26,7 @@ pub struct DistinctSingleKeyCircuit<
 }
 
 #[derive(Clone, Debug)]
-pub struct DSKConfig {
+pub struct DSKConfig<F: FieldExt> {
     q_raw_cards: Selector,
     q_range_check: Selector,
     q_key_equal_gate: Selector,
@@ -27,12 +34,13 @@ pub struct DSKConfig {
     advice: Column<Advice>,
     fixed: Column<Fixed>,
     instance: Column<Instance>,
+    poseidon: Pow5Config<F, 3, 2>,
 }
 
 impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_BYTES: usize>
     Circuit<F> for DistinctSingleKeyCircuit<F, NUM_CARDS, WORD_BYTES, FIELD_BYTES>
 {
-    type Config = DSKConfig;
+    type Config = DSKConfig<F>;
 
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -48,9 +56,21 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
         let advice = meta.advice_column();
         let fixed = meta.fixed_column();
         let instance = meta.instance_column();
-
         meta.enable_equality(advice);
         meta.enable_equality(instance);
+
+        let state = (0..3).map(|_| meta.advice_column()).collect::<Vec<_>>();
+        let partial_sbox = meta.advice_column();
+        let rc_a = (0..3).map(|_| meta.fixed_column()).collect::<Vec<_>>();
+        let rc_b = (0..3).map(|_| meta.fixed_column()).collect::<Vec<_>>();
+        meta.enable_constant(rc_b[0]);
+        let poseidon = Pow5Chip::<F, 3, 2>::configure::<MySpec<F, 3, 2>>(
+            meta,
+            state.try_into().unwrap(),
+            partial_sbox,
+            rc_a.try_into().unwrap(),
+            rc_b.try_into().unwrap(),
+        );
 
         meta.lookup_any("raw cards must be unique", |meta| {
             // fixed table
@@ -126,6 +146,7 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
             advice,
             fixed,
             instance,
+            poseidon,
         }
     }
 
@@ -150,7 +171,7 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
             },
         )?;
 
-        let cells = layouter.assign_region(
+        let (cells, key, key_salt) = layouter.assign_region(
             || "witness",
             |mut region| {
                 let mut offset = 0;
@@ -169,18 +190,19 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
                 offset += NUM_CARDS;
 
                 // Assign key
+                let mut key: Option<_> = None;
                 for i in 0..NUM_CARDS {
                     config.q_range_check.enable(&mut region, offset + i)?;
                     if i < NUM_CARDS - 1 {
                         // since gate checks cur == next, we need last one to not be on
                         config.q_key_equal_gate.enable(&mut region, offset + i)?;
                     }
-                    region.assign_advice(
+                    key = Some(region.assign_advice(
                         || "key cell",
                         config.advice,
                         offset + i,
                         || Value::known(F::from(self.key)),
-                    )?;
+                    )?);
                 }
                 offset += NUM_CARDS;
 
@@ -232,7 +254,7 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
                 offset += num_slots * FIELD_BYTES;
 
                 // final compressed value
-                let mut cells = vec![];
+                let mut compressed_cells = vec![];
                 for i in 0..num_slots {
                     let start = FIELD_BYTES * i;
                     let end = FIELD_BYTES * (i + 1);
@@ -250,7 +272,7 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
                         .q_compressor
                         .enable(&mut region, offset + i * FIELD_BYTES)?;
 
-                    cells.push(region.assign_advice(
+                    compressed_cells.push(region.assign_advice(
                         || "addmod cell",
                         config.advice,
                         offset + i * FIELD_BYTES,
@@ -258,13 +280,35 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
                     )?);
                 }
 
-                Ok(cells)
+                offset += (num_slots - 1) * FIELD_BYTES + 1;
+
+                let key_salt = region.assign_advice(
+                    || "key_salt",
+                    config.advice,
+                    offset,
+                    || Value::known(self.key_salt),
+                )?;
+
+                Ok((compressed_cells, key.unwrap(), key_salt))
             },
         )?;
 
+        let mut instance_offset = 0;
+
+        // Expose encrypted cards
         for (i, cell) in cells.iter().enumerate() {
             layouter.constrain_instance(cell.cell(), config.instance, i)?;
         }
+        instance_offset += cells.len();
+
+        // Hash of key & key salt
+        let poseidon_chip = Pow5Chip::construct(config.poseidon.clone());
+        let hasher = Hash::<_, _, MySpec<F, 3, 2>, ConstantLength<2>, 3, 2>::init(
+            poseidon_chip,
+            layouter.namespace(|| "init"),
+        )?;
+        let output = hasher.hash(layouter.namespace(|| "hash"), [key, key_salt])?;
+        layouter.constrain_instance(output.cell(), config.instance, instance_offset)?;
 
         Ok(())
     }
@@ -297,6 +341,10 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
             values.push(acc);
         }
 
+        let output = poseidon::Hash::<F, MySpec<F, 3, 2>, ConstantLength<2>, 3, 2>::init()
+            .hash([F::from(self.key), self.key_salt]);
+        values.push(output);
+
         vec![values]
     }
 
@@ -307,5 +355,32 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
             vec!["instance"],
             vec!["q_raw_cards", "q_range", "q_key_equal_gate", "q_compressor"],
         )
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MySpec<F: FieldExt, const WIDTH: usize, const RATE: usize>(marker::PhantomData<F>);
+
+impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Spec<F, WIDTH, RATE>
+    for MySpec<F, WIDTH, RATE>
+{
+    fn full_rounds() -> usize {
+        8
+    }
+
+    fn partial_rounds() -> usize {
+        56
+    }
+
+    fn sbox(val: F) -> F {
+        val.pow_vartime([5])
+    }
+
+    fn secure_mds() -> usize {
+        0
+    }
+
+    fn constants() -> (Vec<[F; WIDTH]>, Mds<F, WIDTH>, Mds<F, WIDTH>) {
+        generate_constants::<_, Self, WIDTH, RATE>()
     }
 }
