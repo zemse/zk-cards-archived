@@ -1,3 +1,4 @@
+pub mod addmod_chip;
 pub mod distinct_single_key;
 #[allow(unused_imports)]
 #[allow(unused_variables)]

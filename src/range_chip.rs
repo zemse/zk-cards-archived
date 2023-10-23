@@ -66,6 +66,7 @@ impl<F: FieldExt, const SIZE: usize> RangeConfig<F, SIZE> {
     }
 }
 
+#[derive(Clone)]
 pub struct RangeChip<F: FieldExt, const SIZE: usize> {
     config: RangeConfig<F, SIZE>,
     _marker: PhantomData<F>,

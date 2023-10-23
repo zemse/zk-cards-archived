@@ -10,6 +10,7 @@ use halo2_utils::{
 };
 
 use crate::{
+    addmod_chip::AddModChip,
     gate_chip::{self, GateChip},
     poseidon_chip::{poseidon_sync, PoseidonChip},
     range_chip::RangeConfig,
@@ -66,9 +67,12 @@ impl<F: FieldExt, const N: usize> Circuit<F> for FirstCircuit<F, N> {
         let range_chip = config
             .range_config
             .construct(layouter.namespace(|| "range_chip"))?;
+        let addmod_chip = AddModChip::from(utils.clone(), range_chip.clone());
 
         let a = utils.load_private(layouter.namespace(|| "load a"), Value::known(self.a))?;
         let b = utils.load_private(layouter.namespace(|| "load b"), Value::known(self.b))?;
+
+        let result = addmod_chip.addmod(layouter.namespace(|| "addmod"), a.clone(), b.clone())?;
 
         range_chip.range_constrain(layouter.namespace(|| "range constrain"), b.clone())?;
 

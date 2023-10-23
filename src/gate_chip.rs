@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use halo2_utils::{
     halo2_proofs::{
         circuit::{AssignedCell, Layouter, Region, Value},
@@ -8,6 +6,7 @@ use halo2_utils::{
     },
     FieldExt,
 };
+use std::marker::PhantomData;
 
 type Cell<F> = AssignedCell<F, F>;
 
@@ -27,7 +26,7 @@ impl<F: FieldExt> GateChip<F> {
         let advice = advice.unwrap_or(meta.advice_column());
         meta.enable_equality(advice);
 
-        meta.create_gate("grand condition", |meta| {
+        meta.create_gate("gate condition", |meta| {
             let q_gate = meta.query_selector(q_gate);
             let a = meta.query_advice(advice, Rotation::cur());
             let b = meta.query_advice(advice, Rotation::next());
@@ -132,7 +131,7 @@ impl<F: FieldExt> GateChip<F> {
 
                 a.copy_advice(|| "a", &mut region, self.advice, 0)?;
                 b.copy_advice(|| "b", &mut region, self.advice, 1)?;
-                b.copy_advice(|| "c", &mut region, self.advice, 2)?;
+                c.copy_advice(|| "c", &mut region, self.advice, 2)?;
 
                 let value = a.value().copied() * b.value() + c.value();
                 region.assign_advice(|| "d", self.advice, 3, || value)
