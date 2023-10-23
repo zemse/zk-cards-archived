@@ -19,9 +19,12 @@ pub struct GateChip<F: FieldExt> {
 }
 
 impl<F: FieldExt> GateChip<F> {
-    pub fn configure(meta: &mut halo2_utils::halo2_proofs::plonk::ConstraintSystem<F>) -> Self {
+    pub fn configure(
+        meta: &mut halo2_utils::halo2_proofs::plonk::ConstraintSystem<F>,
+        advice: Option<Column<Advice>>,
+    ) -> Self {
         let q_gate = meta.selector();
-        let advice = meta.advice_column();
+        let advice = advice.unwrap_or(meta.advice_column());
         meta.enable_equality(advice);
 
         meta.create_gate("grand condition", |meta| {

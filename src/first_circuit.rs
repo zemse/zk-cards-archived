@@ -12,24 +12,26 @@ use halo2_utils::{
 use crate::{
     gate_chip::{self, GateChip},
     poseidon_chip::{poseidon_sync, PoseidonChip},
+    range_chip::RangeConfig,
 };
 
 #[derive(Clone)]
-pub struct FirstCircuit<F: FieldExt> {
+pub struct FirstCircuit<F: FieldExt, const N: usize> {
     pub a: F,
     pub b: F,
     pub n: F,
 }
 
 #[derive(Clone)]
-pub struct FirstCircuitConfig<F: FieldExt> {
+pub struct FirstCircuitConfig<F: FieldExt, const N: usize> {
     grand_chip: GateChip<F>,
+    range_config: RangeConfig<F, N>,
     poseidon_chip: PoseidonChip<F, 2>,
     instance: Column<Instance>,
 }
 
-impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
-    type Config = FirstCircuitConfig<F>;
+impl<F: FieldExt, const N: usize> Circuit<F> for FirstCircuit<F, N> {
+    type Config = FirstCircuitConfig<F, N>;
 
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -38,7 +40,10 @@ impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
     }
 
     fn configure(meta: &mut halo2_utils::halo2_proofs::plonk::ConstraintSystem<F>) -> Self::Config {
-        let grand_chip = GateChip::configure(meta);
+        let advice = meta.advice_column();
+
+        let grand_chip = GateChip::configure(meta, Some(advice));
+        let range_config = RangeConfig::<F, N>::configure(meta, Some(advice));
         let poseidon_chip = PoseidonChip::configure(meta);
 
         let instance = meta.instance_column();
@@ -46,6 +51,7 @@ impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
 
         FirstCircuitConfig {
             grand_chip,
+            range_config,
             poseidon_chip,
             instance,
         }
@@ -57,9 +63,14 @@ impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
         mut layouter: impl halo2_utils::halo2_proofs::circuit::Layouter<F>,
     ) -> Result<(), halo2_utils::halo2_proofs::plonk::Error> {
         let utils = config.grand_chip;
+        let range_chip = config
+            .range_config
+            .construct(layouter.namespace(|| "range_chip"))?;
 
         let a = utils.load_private(layouter.namespace(|| "load a"), Value::known(self.a))?;
         let b = utils.load_private(layouter.namespace(|| "load b"), Value::known(self.b))?;
+
+        range_chip.range_constrain(layouter.namespace(|| "range constrain"), b.clone())?;
 
         let product = utils.mul(layouter.namespace(|| "mul"), a.clone(), b)?;
 
@@ -85,7 +96,7 @@ impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
     }
 }
 
-impl<F: FieldExt> CircuitExt<F> for FirstCircuit<F> {
+impl<F: FieldExt, const N: usize> CircuitExt<F> for FirstCircuit<F, N> {
     fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
         let grand_chip = GateChip::<F>::annotations();
         (
