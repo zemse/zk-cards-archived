@@ -10,7 +10,7 @@ use halo2_utils::{
 };
 
 use crate::{
-    grand_chip::{self, GrandChip},
+    gate_chip::{self, GateChip},
     poseidon_chip::{poseidon_sync, PoseidonChip},
 };
 
@@ -23,7 +23,7 @@ pub struct FirstCircuit<F: FieldExt> {
 
 #[derive(Clone)]
 pub struct FirstCircuitConfig<F: FieldExt> {
-    grand_chip: GrandChip<F>,
+    grand_chip: GateChip<F>,
     poseidon_chip: PoseidonChip<F, 2>,
     instance: Column<Instance>,
 }
@@ -38,7 +38,7 @@ impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
     }
 
     fn configure(meta: &mut halo2_utils::halo2_proofs::plonk::ConstraintSystem<F>) -> Self::Config {
-        let grand_chip = GrandChip::configure(meta);
+        let grand_chip = GateChip::configure(meta);
         let poseidon_chip = PoseidonChip::configure(meta);
 
         let instance = meta.instance_column();
@@ -87,7 +87,7 @@ impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
 
 impl<F: FieldExt> CircuitExt<F> for FirstCircuit<F> {
     fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
-        let grand_chip = GrandChip::<F>::annotations();
+        let grand_chip = GateChip::<F>::annotations();
         (
             grand_chip.0.iter().chain([].iter()).copied().collect(),
             grand_chip.1.iter().chain([].iter()).copied().collect(),

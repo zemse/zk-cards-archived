@@ -12,13 +12,13 @@ use halo2_utils::{
 type Cell<F> = AssignedCell<F, F>;
 
 #[derive(Clone)]
-pub struct GrandChip<F: FieldExt> {
+pub struct GateChip<F: FieldExt> {
     q_gate: Selector,
     advice: Column<Advice>,
     _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt> GrandChip<F> {
+impl<F: FieldExt> GateChip<F> {
     pub fn configure(meta: &mut halo2_utils::halo2_proofs::plonk::ConstraintSystem<F>) -> Self {
         let q_gate = meta.selector();
         let advice = meta.advice_column();
