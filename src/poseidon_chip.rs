@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use halo2_utils::{
     halo2_gadgets::poseidon::{
         primitives::{self as poseidon, generate_constants, ConstantLength, Mds, Spec},
-        Hash, Pow5Chip, Pow5Config,
+        Hash, Pow5Chip,
     },
     halo2_proofs::{circuit::Layouter, plonk::Error},
     FieldExt,

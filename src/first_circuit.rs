@@ -15,21 +15,21 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct AddModCircuit<F: FieldExt> {
+pub struct FirstCircuit<F: FieldExt> {
     pub a: F,
     pub b: F,
     pub n: F,
 }
 
 #[derive(Clone)]
-pub struct AddModCircuitConfig<F: FieldExt> {
+pub struct FirstCircuitConfig<F: FieldExt> {
     grand_chip: GrandChip<F>,
     poseidon_chip: PoseidonChip<F, 2>,
     instance: Column<Instance>,
 }
 
-impl<F: FieldExt> Circuit<F> for AddModCircuit<F> {
-    type Config = AddModCircuitConfig<F>;
+impl<F: FieldExt> Circuit<F> for FirstCircuit<F> {
+    type Config = FirstCircuitConfig<F>;
 
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -44,7 +44,7 @@ impl<F: FieldExt> Circuit<F> for AddModCircuit<F> {
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
-        AddModCircuitConfig {
+        FirstCircuitConfig {
             grand_chip,
             poseidon_chip,
             instance,
@@ -85,7 +85,7 @@ impl<F: FieldExt> Circuit<F> for AddModCircuit<F> {
     }
 }
 
-impl<F: FieldExt> CircuitExt<F> for AddModCircuit<F> {
+impl<F: FieldExt> CircuitExt<F> for FirstCircuit<F> {
     fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
         let grand_chip = GrandChip::<F>::annotations();
         (

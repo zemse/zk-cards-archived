@@ -279,7 +279,7 @@ fn main() {
     //     _marker: std::marker::PhantomData,
     // };
 
-    let circuit = zk_card::addmod_circuit::AddModCircuit {
+    let circuit = zk_card::first_circuit::FirstCircuit {
         a: Fr::from(3),
         b: Fr::from(4),
         n: Fr::from(5),
