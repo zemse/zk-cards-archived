@@ -9,9 +9,12 @@ edition = "2021"
 halo2-utils = { path = "/Users/sohamzemse/Workspace/opensource/personal/halo2-utils", features = ["evm-verifier"]}
 itertools = "0.10.3"
 rand = "0.8"
+serde = "1.0.188"
+serde_json = "1.0.107"
 
 [patch."https://github.com/privacy-scaling-explorations/halo2.git"]
 halo2_proofs = { path = "../../opensource/external/pse-halo2/halo2_proofs" } 
+halo2_gadgets = { path = "../../opensource/external/pse-halo2/halo2_gadgets" } 
 
 [patch."https://github.com/privacy-scaling-explorations/snark-verifier.git"]
 snark-verifier-sdk = { path = "/Users/sohamzemse/Workspace/opensource/external/snark-verifier/snark-verifier-sdk" } 

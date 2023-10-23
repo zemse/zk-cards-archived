@@ -1810,14 +1810,13 @@ dependencies = [
 [[package]]
 name = "halo2_gadgets"
 version = "0.2.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2.git?rev=0c3e3b56#0c3e3b569519b86653a64f412bbce17e4e8acac4"
 dependencies = [
  "arrayvec",
  "bitvec",
  "ff",
  "group",
  "halo2_proofs",
- "halo2curves 0.1.0",
+ "halo2curves",
  "lazy_static",
  "rand",
  "subtle",
@@ -1831,7 +1830,7 @@ dependencies = [
  "blake2b_simd",
  "ff",
  "group",
- "halo2curves 0.3.2",
+ "halo2curves",
  "plotters",
  "rand_chacha",
  "rand_core",
@@ -1839,26 +1838,6 @@ dependencies = [
  "sha3 0.9.1",
  "tabbycat",
  "tracing",
-]
-
-[[package]]
-name = "halo2curves"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6b1142bd1059aacde1b477e0c80c142910f1ceae67fc619311d6a17428007ab"
-dependencies = [
- "blake2b_simd",
- "ff",
- "group",
- "lazy_static",
- "num-bigint",
- "num-traits",
- "pasta_curves",
- "paste",
- "rand",
- "rand_core",
- "static_assertions",
- "subtle",
 ]
 
 [[package]]
@@ -2969,7 +2948,7 @@ name = "poseidon"
 version = "0.2.0"
 source = "git+https://github.com/privacy-scaling-explorations/poseidon?tag=v2023_04_20#807f8f555313f726ca03bdf941f798098f488ba4"
 dependencies = [
- "halo2curves 0.3.2",
+ "halo2curves",
  "subtle",
 ]
 
@@ -3763,7 +3742,7 @@ version = "0.1.1"
 dependencies = [
  "ecc",
  "halo2_proofs",
- "halo2curves 0.3.2",
+ "halo2curves",
  "hex",
  "itertools 0.10.5",
  "lazy_static",
@@ -3786,7 +3765,7 @@ dependencies = [
  "ecc",
  "ethereum-types",
  "halo2_proofs",
- "halo2curves 0.3.2",
+ "halo2curves",
  "hex",
  "itertools 0.10.5",
  "lazy_static",
@@ -4769,6 +4748,8 @@ dependencies = [
  "halo2-utils",
  "itertools 0.10.5",
  "rand",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,3 +1,11 @@
+#[allow(unused_imports)]
+#[allow(unused_variables)]
+use halo2_utils::snark_verifier::{
+    loader::evm::{self, deploy_and_call, encode_calldata, EvmLoader},
+    pcs::kzg::{Gwc19, KzgAs},
+    system::halo2::{compile, transcript::evm::EvmTranscript, Config},
+    verifier::{self, SnarkVerifier},
+};
 use halo2_utils::{
     ethers::utils::keccak256,
     halo2_proofs::{
@@ -8,7 +16,7 @@ use halo2_utils::{
             ConstraintSystem, Error, Fixed, Instance, ProvingKey, VerifyingKey,
         },
         poly::{
-            commitment::{Params, ParamsProver},
+            commitment::ParamsProver,
             kzg::{
                 commitment::{KZGCommitmentScheme, ParamsKZG},
                 multiopen::{ProverGWC, VerifierGWC},
@@ -20,15 +28,6 @@ use halo2_utils::{
     },
 };
 use halo2_utils::{
-    example_circuit::MyCircuit,
-    snark_verifier::{
-        loader::evm::{self, deploy_and_call, encode_calldata, EvmLoader},
-        pcs::kzg::{Gwc19, KzgAs},
-        system::halo2::{compile, transcript::evm::EvmTranscript, Config},
-        verifier::{self, SnarkVerifier},
-    },
-};
-use halo2_utils::{
     halo2_proofs::halo2curves::{
         bn256::{Bn256, Fq, Fr, G1Affine},
         ff::Field,
@@ -37,7 +36,16 @@ use halo2_utils::{
 };
 use itertools::Itertools;
 use rand::{rngs::OsRng, RngCore};
-use std::rc::Rc;
+use serde::{Deserialize, Serialize};
+use std::{
+    cmp,
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
+    rc::Rc,
+    str::FromStr,
+};
+#[allow(unused_imports)]
 use zk_card::distinct_single_key::DistinctSingleKeyCircuit;
 
 type PlonkVerifier = verifier::plonk::PlonkVerifier<KzgAs<Bn256, Gwc19>>;
@@ -99,6 +107,7 @@ impl StandardPlonkConfig {
 #[derive(Clone, Default)]
 struct StandardPlonk(Fr);
 
+#[allow(dead_code)]
 impl StandardPlonk {
     fn rand<R: RngCore>(mut rng: R) -> Self {
         Self(Fr::from(rng.next_u32() as u64))
@@ -220,7 +229,6 @@ fn gen_evm_verifier(
     vk: &VerifyingKey<G1Affine>,
     num_instance: Vec<usize>,
 ) -> Vec<u8> {
-    println!("1");
     let protocol = compile(
         params,
         vk,
@@ -236,41 +244,106 @@ fn gen_evm_verifier(
     let proof = PlonkVerifier::read_proof(&vk, &protocol, &instances, &mut transcript).unwrap();
     PlonkVerifier::verify(&vk, &protocol, &instances, &proof).unwrap();
 
-    println!("solidity code {}", loader.solidity_code());
-
     evm::compile_solidity(&loader.solidity_code())
 }
 
-fn evm_verify(deployment_code: Vec<u8>, instances: Vec<Vec<Fr>>, proof: Vec<u8>) {
+fn evm_verify(deployment_code: Vec<u8>, instances: Vec<Vec<Fr>>, proof: Vec<u8>) -> (usize, usize) {
     let calldata = encode_calldata(&instances, &proof);
-    println!("calldata: {:?}", (calldata));
+    let calldata_len = calldata.len();
     let gas_cost = deploy_and_call(deployment_code, calldata).unwrap();
     dbg!(gas_cost);
+    (calldata_len, gas_cost as usize)
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+struct Info {
+    bytecode_len: usize,
+    calldata_len: usize,
+    gas_cost: usize,
 }
 
 fn main() {
-    let params = gen_srs(6);
+    let k = 7;
+    let params = gen_srs(k);
 
     // let circuit = StandardPlonk::rand(OsRng);
-    let raw_cards = randomize(std::array::from_fn(|i| i as u64), 20);
-    let circuit = DistinctSingleKeyCircuit::<Fr, 4, 1, 31> {
-        raw_cards,
-        key: 3,
-        key_salt: Fr::from(0x1234),
-    };
+    // let raw_cards = randomize(std::array::from_fn(|i| i as u64), 20);
+    // let circuit = DistinctSingleKeyCircuit::<Fr, 4, 1, 31> {
+    //     raw_cards,
+    //     key: 3,
+    //     key_salt: Fr::from(0x1234),
+    // };
     // let circuit = MyCircuit {
     //     a: Fr::from(3),
     //     b: Fr::from(4),
     //     _marker: std::marker::PhantomData,
     // };
+
+    let circuit = zk_card::addmod_circuit::AddModCircuit {
+        a: Fr::from(3),
+        b: Fr::from(4),
+        n: Fr::from(5),
+    };
+
+    halo2_utils::info_printer::print(k, &circuit).unwrap();
+    halo2_utils::assignments_printer::print(k, &circuit, vec!["advice", "instance", "q_gate"])
+        .unwrap();
+    // halo2_utils::assignments_printer::print_all(
+    //     k,
+    //     &circuit,
+    //     Some(vec![halo2_utils::assignments_printer::Column::Fixed(0)]),
+    // )
+    // .unwrap();
+    println!();
+
     let pk = gen_pk(&params, &circuit);
-    println!("11");
     let deployment_code = gen_evm_verifier(&params, pk.get_vk(), StandardPlonk::num_instance());
+    let bytecode_len = deployment_code.len();
 
     let proof = gen_proof(&params, &pk, circuit.clone(), circuit.instances());
-    evm_verify(deployment_code, circuit.instances(), proof);
+    let (calldata_len, gas_cost) = evm_verify(deployment_code, circuit.instances(), proof);
+
+    let new_info = Info {
+        bytecode_len,
+        calldata_len,
+        gas_cost,
+    };
+
+    let mut file = File::open(PathBuf::from_str("./data.json").unwrap()).unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+    let old_info: Info = serde_json::from_str(&contents).unwrap();
+
+    println!(
+        "bytecode_len: {}{}",
+        new_info.bytecode_len,
+        format_change(new_info.bytecode_len, old_info.bytecode_len)
+    );
+    println!(
+        "calldata_len: {}{}",
+        new_info.calldata_len,
+        format_change(new_info.calldata_len, old_info.calldata_len)
+    );
+    println!(
+        "gas_cost: {}{}",
+        new_info.gas_cost,
+        format_change(new_info.gas_cost, old_info.gas_cost)
+    );
+
+    let str_val = serde_json::to_string(&new_info);
+    let mut file = File::create(PathBuf::from_str("./data.json").unwrap()).unwrap();
+    file.write_all(str_val.unwrap().as_bytes()).unwrap();
 }
 
+fn format_change(a: usize, b: usize) -> String {
+    match cmp::Ord::cmp(&a, &b) {
+        cmp::Ordering::Less => format!(" (-{})", b - a),
+        cmp::Ordering::Equal => String::new(),
+        cmp::Ordering::Greater => format!(" (+{})", a - b),
+    }
+}
+
+#[allow(dead_code)]
 fn randomize<const N: usize>(mut arr: [u64; N], rounds: usize) -> [u64; N] {
     let mut seed = [0; 32];
     for _ in 0..rounds {

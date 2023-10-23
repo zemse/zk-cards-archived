@@ -1,5 +1,5 @@
-use std::marker;
-
+#[allow(unused_imports)]
+#[allow(unused_variables)]
 use halo2_utils::{
     halo2_gadgets::poseidon::{
         primitives::{self as poseidon, generate_constants, ConstantLength, Mds, Spec},
@@ -12,6 +12,9 @@ use halo2_utils::{
     },
     CircuitExt, Expr, FieldExt,
 };
+#[allow(unused_imports)]
+#[allow(unused_variables)]
+use std::marker;
 
 #[derive(Debug, Clone)]
 pub struct DistinctSingleKeyCircuit<

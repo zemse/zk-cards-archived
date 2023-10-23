@@ -1,6 +1,8 @@
 mod distinct_single_key;
+#[allow(unused_imports)]
 use std::{path::PathBuf, rc::Rc, str::FromStr};
 
+#[allow(unused_imports)]
 use halo2_utils::{
     self, assignments_printer, ethers,
     ethers::utils::keccak256,
@@ -13,6 +15,7 @@ use halo2_utils::{
     },
     info_printer, CircuitExt, RealProver,
 };
+#[allow(unused_imports)]
 use halo2_utils::{
     rand_chacha::rand_core::OsRng,
     snark_verifier::{
