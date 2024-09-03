@@ -1,4 +1,5 @@
 use halo2_utils::halo2_proofs::halo2curves::bn256::Fr;
+use zk_card::first_circuit::FirstCircuit;
 
 fn main() {
     let k = 7;
@@ -16,13 +17,13 @@ fn main() {
     //     _marker: std::marker::PhantomData,
     // };
 
-    let circuit = zk_card::first_circuit::FirstCircuit::<Fr, 5> {
-        a: Fr::from(3),
-        b: Fr::from(4),
-        n: Fr::from(5),
-    };
+    // let circuit = zk_card::first_circuit::FirstCircuit::<Fr, 5> {
+    //     a: Fr::from(3),
+    //     b: Fr::from(4),
+    //     n: Fr::from(5),
+    // };
 
-    halo2_utils::info_printer::print(k, &circuit).unwrap();
+    halo2_utils::info_printer::print::<Fr, FirstCircuit<Fr>>().unwrap();
     halo2_utils::assignments_printer::print(k, &circuit, vec!["advice", "instance", "q_gate"])
         .unwrap();
     // halo2_utils::assignments_printer::print_all(

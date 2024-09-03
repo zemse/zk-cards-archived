@@ -351,14 +351,14 @@ impl<F: FieldExt, const NUM_CARDS: usize, const WORD_BYTES: usize, const FIELD_B
         vec![values]
     }
 
-    fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
-        (
-            vec!["advice"],
-            vec!["fixed"],
-            vec!["instance"],
-            vec!["q_raw_cards", "q_range", "q_key_equal_gate", "q_compressor"],
-        )
-    }
+    // fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
+    //     (
+    //         vec!["advice"],
+    //         vec!["fixed"],
+    //         vec!["instance"],
+    //         vec!["q_raw_cards", "q_range", "q_key_equal_gate", "q_compressor"],
+    //     )
+    // }
 }
 
 #[derive(Debug, Clone, Copy)]

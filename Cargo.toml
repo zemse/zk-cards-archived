@@ -6,11 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-halo2-utils = { path = "/Users/sohamzemse/Workspace/opensource/personal/halo2-utils", features = ["evm-verifier"]}
+halo2-utils = { path = "/Users/sohamzemse/Workspace/opensource/personal/halo2-utils", features = [] }
 itertools = "0.10.3"
 rand = "0.8"
 serde = "1.0.188"
 serde_json = "1.0.107"
+
+# [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+# getrandom = { version = "0.2", features = ["js"] }
+
 
 [patch."https://github.com/privacy-scaling-explorations/halo2.git"]
 halo2_proofs = { path = "/Users/sohamzemse/Workspace/opensource/external/pse-halo2/halo2_proofs" } 

@@ -74,9 +74,9 @@ impl<F: FieldExt, const N: usize> Circuit<F> for PreimageCircuit<F, N> {
 }
 
 impl<F: FieldExt, const N: usize> CircuitExt<F> for PreimageCircuit<F, N> {
-    fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
-        (vec!["advice"], vec![], vec!["instance"], vec![])
-    }
+    // fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
+    //     (vec!["advice"], vec![], vec!["instance"], vec![])
+    // }
 
     fn instances(&self) -> Vec<Vec<F>> {
         vec![vec![poseidon_sync([self.a, self.b])]]

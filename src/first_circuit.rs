@@ -101,20 +101,20 @@ impl<F: FieldExt, const N: usize> Circuit<F> for FirstCircuit<F, N> {
 }
 
 impl<F: FieldExt, const N: usize> CircuitExt<F> for FirstCircuit<F, N> {
-    fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
-        let grand_chip = GateChip::<F>::annotations();
-        (
-            grand_chip.0.iter().chain([].iter()).copied().collect(),
-            grand_chip.1.iter().chain([].iter()).copied().collect(),
-            grand_chip
-                .2
-                .iter()
-                .chain(["instance"].iter())
-                .copied()
-                .collect(),
-            grand_chip.3.iter().chain([].iter()).copied().collect(),
-        )
-    }
+    // fn annotations(&self) -> (Vec<&str>, Vec<&str>, Vec<&str>, Vec<&str>) {
+    //     let grand_chip = GateChip::<F>::annotations();
+    //     (
+    //         grand_chip.0.iter().chain([].iter()).copied().collect(),
+    //         grand_chip.1.iter().chain([].iter()).copied().collect(),
+    //         grand_chip
+    //             .2
+    //             .iter()
+    //             .chain(["instance"].iter())
+    //             .copied()
+    //             .collect(),
+    //         grand_chip.3.iter().chain([].iter()).copied().collect(),
+    //     )
+    // }
 
     fn instances(&self) -> Vec<Vec<F>> {
         let intermediate = (self.a * self.b).square();

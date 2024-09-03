@@ -1,21 +1,3 @@
-use halo2_utils::halo2_proofs::{
-    circuit::{Layouter, SimpleFloorPlanner, Value},
-    dev::MockProver,
-    plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
-        ConstraintSystem, Error, Fixed, Instance, ProvingKey, VerifyingKey,
-    },
-    poly::{
-        commitment::ParamsProver,
-        kzg::{
-            commitment::{KZGCommitmentScheme, ParamsKZG},
-            multiopen::{ProverGWC, VerifierGWC},
-            strategy::AccumulatorStrategy,
-        },
-        Rotation, VerificationStrategy,
-    },
-    transcript::{TranscriptReadBuffer, TranscriptWriterBuffer},
-};
 #[allow(unused_imports)]
 #[allow(unused_variables)]
 use halo2_utils::snark_verifier::{
@@ -25,14 +7,36 @@ use halo2_utils::snark_verifier::{
     verifier::{self, SnarkVerifier},
 };
 use halo2_utils::{
+    ethers::utils::hex,
     halo2_proofs::halo2curves::{
         bn256::{Bn256, Fq, Fr, G1Affine},
         ff::Field,
     },
     CircuitExt,
 };
+use halo2_utils::{
+    halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::MockProver,
+        plonk::{
+            create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
+            ConstraintSystem, Error, Fixed, Instance, ProvingKey, VerifyingKey,
+        },
+        poly::{
+            commitment::ParamsProver,
+            kzg::{
+                commitment::{KZGCommitmentScheme, ParamsKZG},
+                multiopen::{ProverGWC, VerifierGWC},
+                strategy::AccumulatorStrategy,
+            },
+            Rotation, VerificationStrategy,
+        },
+        transcript::{TranscriptReadBuffer, TranscriptWriterBuffer},
+    },
+    rand_chacha::ChaChaRng,
+};
 use itertools::Itertools;
-use rand::{rngs::OsRng, RngCore};
+use rand::{rngs::OsRng, RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
     cmp,
@@ -165,7 +169,7 @@ impl Circuit<Fr> for StandardPlonk {
 }
 
 fn gen_srs(k: u32) -> ParamsKZG<Bn256> {
-    ParamsKZG::<Bn256>::setup(k, OsRng)
+    ParamsKZG::<Bn256>::setup(k, ChaChaRng::seed_from_u64(2))
 }
 
 fn gen_pk<C: Circuit<Fr>>(params: &ParamsKZG<Bn256>, circuit: &C) -> ProvingKey<G1Affine> {
@@ -245,6 +249,7 @@ fn gen_evm_verifier(
 
 fn evm_verify(deployment_code: Vec<u8>, instances: Vec<Vec<Fr>>, proof: Vec<u8>) -> (usize, usize) {
     let calldata = encode_calldata(&instances, &proof);
+    println!("calldata: {}", hex::encode_prefixed(&calldata));
     let calldata_len = calldata.len();
     let gas_cost = deploy_and_call(deployment_code, calldata).unwrap();
     dbg!(gas_cost);
